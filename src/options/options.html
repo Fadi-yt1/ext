@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tervyn VPN settings</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="layout">
+    <nav class="side">
+      <div class="logo"><img src="../../icons/logo96.png" alt="" width="36" height="36" /><div>Tervyn <span>VPN</span></div></div>
+      <a href="#connection">Connection</a>
+      <a href="#sites">My sites</a>
+      <a href="#sources">Server sources</a>
+      <a href="#own">Your servers</a>
+      <a href="#advanced">Advanced</a>
+      <a href="#about">About</a>
+    </nav>
+
+    <main>
+      <section id="connection" class="card">
+        <h2>Connection</h2>
+        <div class="opt"><div><b>Reconnect when the browser starts</b><p>Restore the VPN after a restart if it was on.</p></div><label class="switch"><input type="checkbox" data-key="reconnectOnStartup" /><span></span></label></div>
+        <div class="opt"><div><b>Automatic failover &amp; auto-switch</b><p>Move to a backup when the server stops responding, and to a server that is clearly faster.</p></div><label class="switch"><input type="checkbox" data-key="autoSwitch" /><span></span></label></div>
+        <div class="opt"><div><b>Switch only when a server is at least</b><p>this much faster (and confirmed on two checks).</p></div><select data-key="switchThreshold" data-type="number"><option value="25">25 % faster</option><option value="40">40 % faster</option><option value="60">60 % faster</option></select></div>
+        <div class="opt"><div><b>Kill switch</b><p>If the server fails, block traffic instead of silently falling back to your real connection.</p></div><label class="switch"><input type="checkbox" data-key="killSwitch" /><span></span></label></div>
+        <div class="opt"><div><b>WebRTC leak protection</b><p>Stop WebRTC from exposing your real IP address while connected.</p></div><label class="switch"><input type="checkbox" data-key="webrtcProtect" /><span></span></label></div>
+        <div class="opt"><div><b>Notifications</b><p>Tell me when Tervyn switches servers or loses the connection.</p></div><label class="switch"><input type="checkbox" data-key="notifications" /><span></span></label></div>
+        <p class="faint">Shortcut: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> connects or disconnects (change it at <code>chrome://extensions/shortcuts</code>).</p>
+      </section>
+
+      <section id="sites" class="card">
+        <h2>My sites</h2>
+        <p class="muted">In <b>Only my sites</b> mode, just these sites go through the VPN; everything else uses your normal connection. Subdomains are included.</p>
+        <div class="seg mode-seg" role="group" aria-label="Routing mode">
+          <button data-mode="all">All sites</button>
+          <button data-mode="sites">Only my sites</button>
+        </div>
+        <h3>Popular services</h3>
+        <div class="chips" id="presets"></div>
+        <h3>Websites</h3>
+        <form class="inline" id="addSiteForm">
+          <input type="text" id="siteInput" placeholder="example.com or a link" autocomplete="off" />
+          <button class="btn primary" type="submit">Add</button>
+        </form>
+        <p class="msg" id="siteMsg"></p>
+        <ul class="tags" id="siteList"></ul>
+        <h3>Never use the VPN for</h3>
+        <p class="faint">One per line: domains (<code>bank.com</code>) or IPv4 ranges (<code>203.0.113.0/24</code>). Local network addresses are always direct.</p>
+        <textarea id="bypass" rows="3" spellcheck="false" placeholder="intranet.example.com"></textarea>
+      </section>
+
+      <section id="sources" class="card">
+        <h2>Server sources</h2>
+        <div class="opt"><div><b>Free public servers</b><p>Download public proxy lists and test them. Operators of free proxies are unknown: avoid logging in to sensitive accounts over them. Every server must pass an HTTPS test with certificate validation before it is used.</p></div><label class="switch"><input type="checkbox" data-key="useFreeLists" /><span></span></label></div>
+        <ul class="sources" id="sourceList"></ul>
+        <form class="inline" id="addSourceForm">
+          <input type="url" id="sourceUrl" placeholder="https://… .txt list (one proxy per line)" />
+          <select id="sourceProto"><option value="http">HTTP</option><option value="socks5">SOCKS5</option></select>
+          <button class="btn" type="submit">Add list</button>
+        </form>
+        <div class="row-btns">
+          <button class="btn" id="refreshLists">Refresh lists now</button>
+          <button class="btn danger" id="clearFree">Forget free servers</button>
+        </div>
+        <p class="msg" id="sourceMsg"></p>
+
+        <h3>Proxio.io</h3>
+        <p class="faint">Use your Proxio API key to load servers from your Proxio account. The key is stored only in this browser.</p>
+        <div class="grid3">
+          <input type="password" data-key="proxioKey" placeholder="API key" autocomplete="off" />
+          <select data-key="proxioProtocol"><option value="socks5">SOCKS5</option><option value="http">HTTP</option><option value="both">Both</option></select>
+          <input type="number" data-key="proxioLimit" data-type="number" min="1" max="1000" />
+        </div>
+      </section>
+
+      <section id="own" class="card">
+        <h2>Your servers</h2>
+        <p class="muted">Paste HTTP(S) or SOCKS5 proxies, one per line: <code>host:port</code>, <code>host:port:user:pass</code>, <code>user:pass@host:port</code>, or links like <code>socks5://host:1080</code>. Provider snippets work too if the proxy URL is on its own line.</p>
+        <p class="faint">VLESS, VMess, Trojan and Shadowsocks need the Xray engine of the Tervyn Android app, and browsers cannot log in to SOCKS5 proxies with a password — use HTTP for authenticated proxies.</p>
+        <textarea id="importText" rows="4" spellcheck="false" placeholder="socks5://203.0.113.10:1080&#10;198.51.100.7:8080:user:secret"></textarea>
+        <div class="inline">
+          <input type="text" id="importName" placeholder="Name (optional, for a single server)" />
+          <button class="btn primary" id="importBtn">Add &amp; test</button>
+          <label class="btn file">Import .txt<input type="file" id="importFile" accept=".txt,text/plain" hidden /></label>
+        </div>
+        <p class="msg" id="importMsg"></p>
+        <ul class="own-list" id="ownList"></ul>
+      </section>
+
+      <section id="advanced" class="card">
+        <h2>Advanced</h2>
+        <div class="opt"><div><b>Test timeout</b><p>How long a server may take to answer the HTTPS test.</p></div><select data-key="testTimeoutMs" data-type="number"><option value="5000">5 s</option><option value="8000">8 s</option><option value="12000">12 s</option></select></div>
+        <div class="opt"><div><b>Working servers to keep ready</b><p>When searching, stop after this many working servers.</p></div><input type="number" data-key="targetWorking" data-type="number" min="1" max="30" /></div>
+        <h3>Test endpoints</h3>
+        <p class="faint">Cloudflare <code>/cdn-cgi/trace</code> URLs, one per line, each on its own host. Each one is a parallel test slot.</p>
+        <textarea id="traceUrls" rows="5" spellcheck="false"></textarea>
+        <div class="row-btns">
+          <button class="btn" id="recalibrate">Check test endpoints</button>
+          <button class="btn" id="resetTrace">Restore defaults</button>
+        </div>
+        <p class="msg" id="calMsg"></p>
+        <h3>Backup</h3>
+        <div class="row-btns">
+          <button class="btn" id="exportBtn">Export settings &amp; servers</button>
+          <label class="btn file">Import backup<input type="file" id="importBackup" accept=".json,application/json" hidden /></label>
+          <button class="btn danger" id="resetAll">Reset everything</button>
+        </div>
+        <p class="msg" id="backupMsg"></p>
+      </section>
+
+      <section id="about" class="card">
+        <h2>About</h2>
+        <p>Tervyn VPN for browsers <span id="version"></span> — the desktop companion of the free, account-free Tervyn VPN Android app.</p>
+        <p class="muted">No accounts, no ads, no telemetry. Everything (settings, servers, history) stays in this browser. The extension protects traffic of this browser only; use the Android app to protect a whole phone.</p>
+        <p class="muted">Free public proxies are run by unknown third parties. Tervyn only uses servers that pass an HTTPS test with a valid certificate, and websites you open over HTTPS stay end-to-end encrypted, but the proxy operator can see which sites you visit.</p>
+        <h3>Recent activity</h3>
+        <ul class="history" id="history"></ul>
+      </section>
+    </main>
+  </div>
+  <div class="toast hidden" id="toast"></div>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

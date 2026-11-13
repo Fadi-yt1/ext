@@ -1,0 +1,12 @@
+{
+  "name": "tervyn-vpn-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tervyn VPN browser extension (Chrome, Edge, Brave, Opera)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/unit/*.test.mjs",
+    "test:e2e": "node tests/e2e/e2e.mjs",
+    "build": "node scripts/build.mjs"
+  }
+}
