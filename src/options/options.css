@@ -57,3 +57,4 @@ textarea { width: 100%; resize: vertical; font-family: ui-monospace, SFMono-Regu
   .side .logo { width: 100%; }
   .grid3 { grid-template-columns: 1fr; }
 }
+.card.warn { border-color: rgba(255, 194, 61, 0.5); }

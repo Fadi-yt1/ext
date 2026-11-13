@@ -73,3 +73,4 @@ main { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px
 .star[aria-pressed='true'] { color: var(--amber); }
 .tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text3); border: 1px solid var(--border); border-radius: 6px; padding: 0 4px; margin-left: 4px; }
 .empty { text-align: center; padding: 30px 10px; }
+.banner.clickable { cursor: pointer; text-decoration: underline; }

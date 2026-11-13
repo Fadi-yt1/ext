@@ -2,6 +2,7 @@ import { getSettings, updateSettings, DEFAULT_SETTINGS } from '../bg/store.js';
 import { PRESETS, normalizeDomain } from '../lib/domains.js';
 import { DEFAULT_SOURCES, DEFAULT_TRACE_URLS, guessProtocol } from '../lib/sources.js';
 import { flag, countryName, ago, latencyClass } from '../lib/format.js';
+import { IS_FIREFOX } from '../lib/platform.js';
 
 const $ = (id) => document.getElementById(id);
 const send = (cmd, extra = {}) => chrome.runtime.sendMessage({ cmd, ...extra });
@@ -243,7 +244,7 @@ async function importText(text) {
   if (r.duplicates) parts.push(`${r.duplicates} duplicates`);
   if (r.invalid) parts.push(`${r.invalid} invalid lines skipped`);
   if (r.xray) parts.push(`${r.xray} VLESS/VMess/Trojan/SS links need the Android app`);
-  if (r.unsupported) parts.push(`${r.unsupported} SOCKS5 with password not supported by browsers`);
+  if (r.unsupported) parts.push(`${r.unsupported} SOCKS5 with password not supported by this browser`);
   msg('importMsg', parts.join(' · ') + (r.added ? ' — testing…' : ''), r.added === 0);
   if (r.added) {
     $('importText').value = '';
@@ -377,6 +378,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
   settings = await getSettings();
   servers = (await chrome.storage.local.get('servers')).servers || {};
   $('version').textContent = `v${chrome.runtime.getManifest().version}`;
+  if (IS_FIREFOX) {
+    const ALL = { origins: ['<all_urls>'] };
+    const checkPerm = async () => $('permCard').classList.toggle('hidden', await chrome.permissions.contains(ALL));
+    $('grantPerm').addEventListener('click', async () => {
+      await chrome.permissions.request(ALL);
+      checkPerm();
+    });
+    chrome.permissions.onAdded?.addListener(checkPerm);
+    chrome.permissions.onRemoved?.addListener(checkPerm);
+    checkPerm();
+  }
   bindInputs();
   render();
   renderHistory();

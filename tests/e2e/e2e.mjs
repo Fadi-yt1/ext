@@ -26,6 +26,8 @@ import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright');
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+// Test exactly what users install (run `npm run build` first).
+const EXT = path.join(ROOT, 'extensions', 'chromium');
 const REAL_IP = '198.51.100.100';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -138,7 +140,7 @@ async function main() {
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: 'chromium',
     headless: true,
-    args: [`--disable-extensions-except=${ROOT}`, `--load-extension=${ROOT}`, '--host-resolver-rules=MAP *.test 127.0.0.1'],
+    args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, '--host-resolver-rules=MAP *.test 127.0.0.1'],
   });
   let failed = false;
   try {

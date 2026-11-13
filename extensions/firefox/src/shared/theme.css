@@ -1,0 +1,96 @@
+/* Tervyn design tokens (mirrors ui/theme/Theme.kt of the Android app). */
+:root {
+  --bg: #030817;
+  --bg2: #07132d;
+  --card: #0b1735;
+  --card-2: #0f1d42;
+  --border: rgba(41, 163, 255, 0.2);
+  --blue: #086bff;
+  --indigo: #3b5bff;
+  --cyan: #00e5ff;
+  --purple: #a100ff;
+  --green: #00e58a;
+  --amber: #ffc23d;
+  --red: #ff4d6a;
+  --text: #ffffff;
+  --text2: #afc5e8;
+  --text3: #6f86ad;
+  --primary-gradient: linear-gradient(90deg, var(--blue), var(--indigo), var(--purple));
+  --neon-gradient: linear-gradient(135deg, var(--cyan), var(--blue), var(--purple));
+  --radius: 20px;
+  --radius-s: 14px;
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, var(--bg2), var(--bg) 45%, var(--bg));
+  color: var(--text);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+button { font: inherit; color: inherit; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 13px;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.btn:hover { background: var(--card-2); border-color: rgba(41, 163, 255, 0.45); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.primary { background: var(--primary-gradient); border-color: transparent; }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.danger { color: var(--red); }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: rgba(255, 255, 255, 0.06); }
+.btn.small { padding: 5px 10px; font-size: 12px; border-radius: 10px; }
+
+.card {
+  background: linear-gradient(180deg, rgba(15, 29, 66, 0.9), rgba(11, 23, 53, 0.9));
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+}
+
+.muted { color: var(--text2); }
+.faint { color: var(--text3); }
+.good { color: var(--green); }
+.ok { color: var(--amber); }
+.bad { color: var(--red); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px;
+  font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border);
+}
+.pill.good { background: rgba(0, 229, 138, 0.1); border-color: rgba(0, 229, 138, 0.3); }
+.pill.ok { background: rgba(255, 194, 61, 0.1); border-color: rgba(255, 194, 61, 0.3); }
+.pill.bad { background: rgba(255, 77, 106, 0.1); border-color: rgba(255, 77, 106, 0.3); }
+
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 3px; }
+.seg button { border: 0; background: transparent; color: var(--text2); padding: 7px 8px; border-radius: 11px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.seg button[aria-pressed='true'] { background: var(--primary-gradient); color: var(--text); }
+
+.switch { position: relative; width: 40px; height: 22px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch span { position: absolute; inset: 0; background: #22304f; border-radius: 999px; cursor: pointer; transition: background 0.15s; }
+.switch span::after { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+.switch input:checked + span { background: var(--blue); }
+.switch input:checked + span::after { transform: translateX(18px); }
+.switch input:focus-visible + span { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+select, input[type='text'], input[type='number'], input[type='password'], input[type='url'], textarea {
+  background: var(--bg2); color: var(--text); border: 1px solid var(--border); border-radius: 12px;
+  padding: 8px 10px; font: inherit; outline: none;
+}
+select:focus, input:focus, textarea:focus { border-color: var(--blue); }
+
+.progress { height: 6px; border-radius: 999px; background: #1a2747; overflow: hidden; }
+.progress > i { display: block; height: 100%; width: 0; background: var(--neon-gradient); transition: width 0.3s; }
+.progress.indeterminate > i { width: 35%; animation: slide 1.2s ease-in-out infinite; }
+@keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.hidden { display: none !important; }

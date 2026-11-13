@@ -1,7 +1,14 @@
 # Tervyn VPN — browser extension
 
 The desktop companion of the [Tervyn VPN Android app](https://github.com/Fadi-yt1/tervynvpn): a free,
-account-free VPN for **Chrome, Edge, Brave, Opera and other Chromium browsers** (Manifest V3).
+account-free VPN for **Chrome, Edge, Firefox, Brave, Opera, Vivaldi and other Chromium browsers** (Manifest V3).
+
+**Ready-to-install folders:**
+
+| Folder | Browsers |
+|---|---|
+| [`extensions/chromium/`](extensions/chromium) | Chrome, Edge, Brave, Opera, Vivaldi, Arc, Yandex and other Chromium browsers |
+| [`extensions/firefox/`](extensions/firefox) | Firefox (desktop, version 128 or later), Firefox for Android, LibreWolf, Waterfox, Floorp |
 
 | Connected | Servers | Not connected |
 |---|---|---|
@@ -43,28 +50,56 @@ A browser extension can only steer the browser's own traffic, through the browse
 * It protects **this browser only**, not other apps on the computer.
 * **VLESS / VMess / Trojan / Shadowsocks** links need the app's Xray engine, so the extension can't use them.
   When you import them, it counts and skips them.
-* Chromium can't send a username/password to **SOCKS5** proxies. Use an HTTP proxy for servers that need a
-  login (HTTP proxy authentication is supported).
+* Chromium browsers can't send a username/password to **SOCKS5** proxies, so use an HTTP proxy there for servers
+  that need a login. **Firefox supports both.**
+* **Safari** has no proxy API for extensions, so a Safari version isn't possible.
 
-## Install (developer mode)
+## Install
 
-1. Download or clone this repository. Alternatively, run `npm run build` and unzip `dist/tervyn-vpn-<version>.zip`.
-2. Open `chrome://extensions` (Edge: `edge://extensions`) and turn on **Developer mode**.
-3. Click **Load unpacked** and select the folder that contains `manifest.json`.
-4. Pin Tervyn VPN to the toolbar and click the power button.
+### Chrome, Edge, Brave, Opera, Vivaldi (Chromium)
+
+1. Download this repository (Code → Download ZIP) and unzip it.
+2. Open the extensions page: `chrome://extensions`, `edge://extensions`, `brave://extensions`, `opera://extensions`
+   or `vivaldi://extensions`.
+3. Turn on **Developer mode** and click **Load unpacked**.
+4. Select the **`extensions/chromium`** folder.
+5. Pin Tervyn VPN to the toolbar and click the power button.
+
+### Firefox
+
+**For testing (removed when Firefox closes):**
+
+1. Open `about:debugging#/runtime/this-firefox` and click **Load Temporary Add-on…**.
+2. Select `extensions/firefox/manifest.json`.
+
+**Permanent install:** release Firefox only installs signed add-ons.
+
+1. Run `npm run build`.
+2. Upload `dist/tervyn-vpn-<version>-firefox.zip` to [addons.mozilla.org](https://addons.mozilla.org/developers/).
+   You can publish it there, or choose *On your own* to get a signed `.xpi` you can share.
+3. Firefox Developer Edition / Nightly can also install the unsigned zip if `xpinstall.signatures.required` is set to `false`.
+
+**After installing:**
+
+* If Firefox shows a banner asking for **access to all websites**, allow it in the settings page. Tervyn needs it
+  to route your traffic.
+* To protect private windows too, open *Add-ons → Tervyn VPN → Run in Private Windows → Allow*.
+
+### Stores
+
+`npm run build` makes `dist/tervyn-vpn-<version>-chromium.zip` (for the Chrome Web Store, Edge Add-ons and
+Opera Add-ons) and `dist/tervyn-vpn-<version>-firefox.zip` (for addons.mozilla.org).
 
 The first connection downloads the proxy lists and tests the servers. On free servers this usually takes 10–60 s.
 Later connections reuse servers that were already verified.
-
-To publish to the store, upload the zip from `npm run build` to the Chrome Web Store / Edge Add-ons dashboard.
 
 ## How it works
 
 ```
 src/
-  background.js        service worker: events, messages, context menu, shortcut, alarms
+  background.js        background (service worker on Chromium, event page on Firefox)
   bg/manager.js        discovery, testing, ranking, connect / failover / auto-switch
-  bg/controller.js     PAC script application, proxy authentication, WebRTC policy
+  bg/controller.js     routing backend (Chromium PAC / Firefox proxy.onRequest), proxy auth, WebRTC policy
   bg/store.js          chrome.storage schema and defaults
   lib/                 pure logic shared with the UI (ports of the app's Kotlin code):
                        proxyList, domains (+ presets), pac, ranking, trace, proxio, sources, format
@@ -72,7 +107,12 @@ src/
   options/             full settings page
 ```
 
-All routing goes through one generated **PAC script**:
+All routing decisions come from one shared function, `route()` in `src/lib/pac.js`:
+
+* **Chromium:** it is embedded into a generated **PAC script** and set with `chrome.proxy.settings`.
+* **Firefox:** it answers `proxy.onRequest` for every request.
+
+A unit test checks that both give the same answer for every host. The routing is:
 
 * the active server for every site (or only for your sites)
 * DIRECT for local names, private networks and your bypass list
@@ -96,8 +136,14 @@ npm run test:e2e     # loads the extension into Chromium and drives it against l
 ```
 
 ```bash
-npm run build        # dist/tervyn-vpn-<version>.zip
+npm run build        # regenerates extensions/chromium + extensions/firefox and the store zips in dist/
 ```
+
+Edit the sources in `src/`, `icons/` and `manifest.json` (the Chromium manifest). The Firefox manifest is derived
+from it in `scripts/build.mjs`. CI fails if the committed `extensions/` folders are out of date.
+
+The unit tests also run the Firefox routing backend against a simulated Firefox API. CI lints the Firefox build
+with Mozilla's `web-ext lint`.
 
 The end-to-end test needs Playwright (`npm i -D playwright && npx playwright install chromium`).
 It starts local HTTP and SOCKS5 proxies:

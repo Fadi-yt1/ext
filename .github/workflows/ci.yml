@@ -12,15 +12,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Unit tests
+      - name: Unit tests (shared logic, Chromium PAC and Firefox proxy.onRequest paths)
         run: npm test
+      - name: extensions/ folders match the sources
+        run: node scripts/build.mjs --check
+      - name: Lint the Firefox build with Mozilla's add-on linter
+        run: npx --yes web-ext@8 lint --source-dir extensions/firefox
       - name: Install Playwright Chromium
         run: npm install --no-save playwright && npx playwright install --with-deps chromium
-      - name: End-to-end tests (extension in Chromium against mock proxies)
+      - name: End-to-end tests (Chromium build against mock proxies)
         run: npm run test:e2e
       - name: Package
         run: npm run build
       - uses: actions/upload-artifact@v4
         with:
-          name: tervyn-vpn-extension
+          name: tervyn-vpn-extensions
           path: dist/*.zip

@@ -188,10 +188,10 @@ export function toUrl(ep) {
 }
 
 /**
- * Chromium cannot authenticate to SOCKS5 proxies, so those endpoints are unusable in a browser.
+ * Chromium cannot authenticate to SOCKS5 proxies (Firefox can), so those endpoints are unusable there.
  * Returns a reason string or null when the endpoint can be used.
  */
-export function browserUnsupportedReason(ep) {
-  if (ep.protocol === PROTOCOLS.SOCKS5 && ep.username) return 'Browsers cannot log in to SOCKS5 proxies';
+export function browserUnsupportedReason(ep, { socksAuth = false } = {}) {
+  if (ep.protocol === PROTOCOLS.SOCKS5 && ep.username && !socksAuth) return 'Chromium browsers cannot log in to SOCKS5 proxies';
   return null;
 }

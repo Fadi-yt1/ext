@@ -20,6 +20,11 @@
     </nav>
 
     <main>
+      <section class="card warn hidden" id="permCard">
+        <h2>Allow Tervyn to route your traffic</h2>
+        <p class="muted">Firefox lets you withhold access to websites from extensions. Tervyn needs it to send your browsing through the VPN and to test servers. Nothing is read or changed on the pages you visit.</p>
+        <button class="btn primary" id="grantPerm">Allow access to all websites</button>
+      </section>
       <section id="connection" class="card">
         <h2>Connection</h2>
         <div class="opt"><div><b>Reconnect when the browser starts</b><p>Restore the VPN after a restart if it was on.</p></div><label class="switch"><input type="checkbox" data-key="reconnectOnStartup" /><span></span></label></div>
@@ -28,7 +33,7 @@
         <div class="opt"><div><b>Kill switch</b><p>If the server fails, block traffic instead of silently falling back to your real connection.</p></div><label class="switch"><input type="checkbox" data-key="killSwitch" /><span></span></label></div>
         <div class="opt"><div><b>WebRTC leak protection</b><p>Stop WebRTC from exposing your real IP address while connected.</p></div><label class="switch"><input type="checkbox" data-key="webrtcProtect" /><span></span></label></div>
         <div class="opt"><div><b>Notifications</b><p>Tell me when Tervyn switches servers or loses the connection.</p></div><label class="switch"><input type="checkbox" data-key="notifications" /><span></span></label></div>
-        <p class="faint">Shortcut: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> connects or disconnects (change it at <code>chrome://extensions/shortcuts</code>).</p>
+        <p class="faint">Shortcut: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> connects or disconnects (change it in Chrome at <code>chrome://extensions/shortcuts</code>, in Firefox under Add-ons → ⚙ → Manage Extension Shortcuts).</p>
       </section>
 
       <section id="sites" class="card">
@@ -79,7 +84,7 @@
       <section id="own" class="card">
         <h2>Your servers</h2>
         <p class="muted">Paste HTTP(S) or SOCKS5 proxies, one per line: <code>host:port</code>, <code>host:port:user:pass</code>, <code>user:pass@host:port</code>, or links like <code>socks5://host:1080</code>. Provider snippets work too if the proxy URL is on its own line.</p>
-        <p class="faint">VLESS, VMess, Trojan and Shadowsocks need the Xray engine of the Tervyn Android app, and browsers cannot log in to SOCKS5 proxies with a password — use HTTP for authenticated proxies.</p>
+        <p class="faint">VLESS, VMess, Trojan and Shadowsocks need the Xray engine of the Tervyn Android app, <span id="socksNote">and Chromium browsers (Chrome, Edge, Brave, Opera) cannot log in to SOCKS5 proxies with a password — use HTTP for authenticated proxies there. Firefox supports both.</span></p>
         <textarea id="importText" rows="4" spellcheck="false" placeholder="socks5://203.0.113.10:1080&#10;198.51.100.7:8080:user:secret"></textarea>
         <div class="inline">
           <input type="text" id="importName" placeholder="Name (optional, for a single server)" />

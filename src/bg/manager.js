@@ -14,6 +14,9 @@ import { rank, decide } from '../lib/ranking.js';
 import { fetchProxio } from '../lib/proxio.js';
 import * as store from './store.js';
 import * as ctl from './controller.js';
+import { CAPS } from '../lib/platform.js';
+
+const unsupportedReason = (ep) => browserUnsupportedReason(ep, CAPS);
 
 const LIST_MAX_AGE = 30 * 60 * 1000;
 const PER_SOURCE_CAP = 250;
@@ -129,7 +132,7 @@ function releaseSlot(url) {
 
 /** Tests one endpoint over HTTPS through the proxy. Resolves to { ok, latencyMs, ip, country, error }. */
 export async function testEndpoint(ep, settings) {
-  const unsupported = browserUnsupportedReason(ep);
+  const unsupported = unsupportedReason(ep);
   if (unsupported) return { ok: false, error: unsupported };
   const cal = calibration || (await calibrate(settings));
   if (!cal.urls.length) return { ok: false, error: 'No test endpoints configured' };
@@ -254,7 +257,7 @@ export async function refreshLists(settings) {
         clearTimeout(t);
         if (!r.ok) return [];
         const text = (await r.text()).slice(0, 3_000_000);
-        const proxies = parseList(text, src.protocol).proxies.filter((p) => !browserUnsupportedReason(p));
+        const proxies = parseList(text, src.protocol).proxies.filter((p) => !unsupportedReason(p));
         return shuffle(proxies).slice(0, PER_SOURCE_CAP);
       } catch {
         return [];
@@ -278,7 +281,7 @@ export async function refreshProxio(settings) {
   const limit = protos.length === 2 ? Math.max(1, Math.floor(settings.proxioLimit / 2)) : settings.proxioLimit;
   const eps = (await Promise.all(protos.map((p) => fetchProxio(settings.proxioKey, p, limit)))).flat();
   await store.removeServers((s) => s.origin === 'proxio' && !s.favorite);
-  for (const ep of eps) if (!browserUnsupportedReason(ep)) await store.putServer(serverRecord(ep, 'proxio', { name: `Proxio ${ep.host}` }));
+  for (const ep of eps) if (!unsupportedReason(ep)) await store.putServer(serverRecord(ep, 'proxio', { name: `Proxio ${ep.host}` }));
   await store.setSession({ proxioAt: Date.now() });
   await store.saveServers({ now: true });
   return eps.length;
@@ -560,7 +563,7 @@ export function onProxyError() {
 
 export async function importServers(text, name) {
   const report = parseList(text, 'http');
-  const supported = report.proxies.filter((ep) => !browserUnsupportedReason(ep));
+  const supported = report.proxies.filter((ep) => !unsupportedReason(ep));
   const unsupported = report.proxies.length - supported.length;
   const added = [];
   for (const ep of supported) {

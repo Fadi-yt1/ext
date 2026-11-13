@@ -1,10 +1,12 @@
 /**
- * Owns the browser's proxy settings: builds the PAC script from the current routing state, applies it
- * (coalescing bursts of changes), answers proxy authentication challenges, and toggles WebRTC leak
- * protection.
+ * Owns the browser's proxy routing.
+ *  - Chromium (Chrome, Edge, Brave, Opera, Vivaldi…): a generated PAC script set via proxy.settings.
+ *  - Firefox: a proxy.onRequest listener that asks the same `route()` function for every request.
+ * Also answers proxy authentication challenges and toggles WebRTC leak protection.
  */
-import { buildPac, directive } from '../lib/pac.js';
+import { buildPac, compileRouting, directive, route, toFirefoxProxyInfo } from '../lib/pac.js';
 import { collectSiteRules } from '../lib/domains.js';
+import { IS_FIREFOX } from '../lib/platform.js';
 import { getServers, getSettings, getState } from './store.js';
 
 const routing = {
@@ -24,32 +26,36 @@ function syncAuth() {
   routing.tests.forEach(add);
 }
 
-let gen = 0;
-let appliedGen = 0;
-let chain = Promise.resolve();
+function routingOptions(s) {
+  const tests = {};
+  routing.tests.forEach((ep, host) => (tests[host] = ep === 'DIRECT' ? 'DIRECT' : directive(ep)));
+  const rules = collectSiteRules(s);
+  return { active: routing.active, mode: s.mode, domains: rules.domains, cidrs: rules.cidrs, bypass: s.bypass, tests, killSwitch: s.killSwitch };
+}
+
+// Firefox: the compiled routing table consulted by proxy.onRequest.
+let compiled = compileRouting({});
+let restored = null; // promise; Firefox requests wait for it so nothing leaks before routing is known
 
 async function doApply() {
   const s = routing.settings || (await getSettings());
   routing.settings = s;
   syncAuth();
+  if (IS_FIREFOX) {
+    compiled = compileRouting(routingOptions(s));
+    return;
+  }
   if (!routing.active && routing.tests.size === 0) {
     await chrome.proxy.settings.clear({ scope: 'regular' });
     return;
   }
-  const tests = {};
-  routing.tests.forEach((ep, host) => (tests[host] = ep === 'DIRECT' ? 'DIRECT' : directive(ep)));
-  const rules = collectSiteRules(s);
-  const data = buildPac({
-    active: routing.active,
-    mode: s.mode,
-    domains: rules.domains,
-    cidrs: rules.cidrs,
-    bypass: s.bypass,
-    tests,
-    killSwitch: s.killSwitch,
-  });
+  const data = buildPac(routingOptions(s));
   await chrome.proxy.settings.set({ value: { mode: 'pac_script', pacScript: { data, mandatory: true } }, scope: 'regular' });
 }
+
+let gen = 0;
+let appliedGen = 0;
+let chain = Promise.resolve();
 
 /** Applies the routing state; concurrent calls are coalesced into as few settings writes as possible. */
 export function apply() {
@@ -91,39 +97,77 @@ export function clearTests() {
   return apply();
 }
 
-/** Restores routing after the service worker was restarted. */
-export async function restore() {
-  const [state, settings, servers] = await Promise.all([getState(), getSettings(), getServers()]);
-  routing.settings = settings;
-  const on = (state.status === 'on' || state.status === 'connecting') && state.activeKey && servers[state.activeKey];
-  routing.active = on ? servers[state.activeKey] : null;
-  await apply();
-  await setWebRtcProtection(Boolean(routing.active) && settings.webrtcProtect);
+/** Restores routing after the service worker / event page was (re)started. */
+export function restore() {
+  restored = (async () => {
+    const [state, settings, servers] = await Promise.all([getState(), getSettings(), getServers()]);
+    routing.settings = settings;
+    const on = (state.status === 'on' || state.status === 'connecting') && state.activeKey && servers[state.activeKey];
+    routing.active = on ? servers[state.activeKey] : null;
+    await apply();
+    await setWebRtcProtection(Boolean(routing.active) && settings.webrtcProtect);
+  })();
+  return restored;
+}
+
+// ---- Firefox request routing ----
+
+function firefoxRoute(details) {
+  let host;
+  try {
+    host = new URL(details.url).hostname;
+  } catch {
+    return { type: 'direct' };
+  }
+  return toFirefoxProxyInfo(route(compiled, host), (h, p) => auth.get(`${h}:${p}`) || null);
+}
+
+/** Must be called synchronously at start-up (Firefox wakes the event page for these events). */
+export function registerProxyHandler() {
+  if (!IS_FIREFOX) return;
+  chrome.proxy.onRequest.addListener(
+    (details) => {
+      if (restored) return restored.then(() => firefoxRoute(details), () => firefoxRoute(details));
+      return firefoxRoute(details);
+    },
+    { urls: ['<all_urls>'] },
+  );
+}
+
+/** Subscribes to proxy errors (Chromium: proxy.onProxyError, Firefox: proxy.onError). */
+export function onProxyError(fn) {
+  const ev = chrome.proxy.onProxyError || chrome.proxy.onError;
+  ev?.addListener(fn);
 }
 
 // ---- proxy authentication (HTTP proxies with user/password) ----
 
 const attempts = new Map(); // requestId -> count
 
+async function credentialsFor(details) {
+  if (!details.isProxy) return null;
+  const key = `${details.challenger.host}:${details.challenger.port}`;
+  const n = (attempts.get(details.requestId) || 0) + 1;
+  attempts.set(details.requestId, n);
+  if (attempts.size > 500) attempts.clear();
+  if (n > 2) return 'cancel';
+  const cred = auth.get(key);
+  if (cred) return cred;
+  // Restarted worker: fall back to the stored active server.
+  const [state, servers] = await Promise.all([getState(), getServers()]);
+  const ep = state.activeKey && servers[state.activeKey];
+  return ep && ep.username && hp(ep) === key ? { username: ep.username, password: ep.password ?? '' } : null;
+}
+
 export function registerAuthHandler() {
+  const toResponse = (c) => (c === 'cancel' ? { cancel: true } : c ? { authCredentials: c } : {});
+  if (IS_FIREFOX) {
+    chrome.webRequest.onAuthRequired.addListener((details) => credentialsFor(details).then(toResponse, () => ({})), { urls: ['<all_urls>'] }, ['blocking']);
+    return;
+  }
   chrome.webRequest.onAuthRequired.addListener(
     (details, callback) => {
-      if (!details.isProxy) return callback({});
-      const key = `${details.challenger.host}:${details.challenger.port}`;
-      const n = (attempts.get(details.requestId) || 0) + 1;
-      attempts.set(details.requestId, n);
-      if (attempts.size > 500) attempts.clear();
-      if (n > 2) return callback({ cancel: true });
-      const answer = (cred) => callback(cred ? { authCredentials: cred } : {});
-      const cred = auth.get(key);
-      if (cred) return answer(cred);
-      // Service worker restarted: fall back to the stored active server.
-      Promise.all([getState(), getServers()])
-        .then(([state, servers]) => {
-          const ep = state.activeKey && servers[state.activeKey];
-          answer(ep && ep.username && hp(ep) === key ? { username: ep.username, password: ep.password ?? '' } : null);
-        })
-        .catch(() => answer(null));
+      credentialsFor(details).then((c) => callback(toResponse(c)), () => callback({}));
     },
     { urls: ['<all_urls>'] },
     ['asyncBlocking'],
@@ -143,8 +187,15 @@ export async function setWebRtcProtection(on) {
   }
 }
 
-/** Who controls the browser proxy setting ('controlled_by_this_extension', 'controlled_by_other_extensions', ...). */
+/**
+ * Who controls proxying. Chromium: proxy.settings levelOfControl. Firefox: proxy.onRequest needs the
+ * "access your data for all websites" permission, which Firefox lets users withhold.
+ */
 export async function levelOfControl() {
+  if (IS_FIREFOX) {
+    const ok = await chrome.permissions.contains({ origins: ['<all_urls>'] });
+    return ok ? 'controlled_by_this_extension' : 'needs_host_permission';
+  }
   const r = await chrome.proxy.settings.get({ incognito: false });
   return r.levelOfControl;
 }

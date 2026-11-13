@@ -6,11 +6,13 @@ import { normalizeDomain } from './lib/domains.js';
 
 // Must be registered synchronously at start-up so proxy auth works after the worker was suspended.
 ctl.registerAuthHandler();
+ctl.registerProxyHandler();
 
 const ready = ctl.restore().then(() => mgr.refreshBadge()).catch((e) => console.warn('Tervyn: restore failed', e));
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  chrome.contextMenus.removeAll(() => {
+  // Firefox for Android has no context menus or keyboard shortcuts.
+  chrome.contextMenus?.removeAll(() => {
     chrome.contextMenus.create({ id: 'tervyn-site', title: 'Route this site through Tervyn (My sites)', contexts: ['page'] });
     chrome.contextMenus.create({ id: 'tervyn-toggle', title: 'Connect / disconnect Tervyn VPN', contexts: ['action'] });
   });
@@ -29,14 +31,14 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'health') mgr.healthCheck();
 });
 
-chrome.proxy.onProxyError.addListener(() => mgr.onProxyError());
+ctl.onProxyError(() => mgr.onProxyError());
 
-chrome.commands.onCommand.addListener(async (cmd) => {
+chrome.commands?.onCommand.addListener(async (cmd) => {
   await ready;
   if (cmd === 'toggle-connection') mgr.toggle();
 });
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+chrome.contextMenus?.onClicked.addListener(async (info, tab) => {
   await ready;
   if (info.menuItemId === 'tervyn-toggle') return mgr.toggle();
   if (info.menuItemId === 'tervyn-site') {

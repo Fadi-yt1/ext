@@ -250,6 +250,11 @@ setInterval(tick, 1000);
   if (r?.level === 'controlled_by_other_extensions') {
     banner.textContent = 'Another extension controls your proxy settings. Disable it so Tervyn can protect your traffic.';
     banner.classList.remove('hidden');
+  } else if (r?.level === 'needs_host_permission') {
+    banner.textContent = 'Firefox needs permission to route your traffic. Click here to allow access to all websites.';
+    banner.classList.add('clickable');
+    banner.addEventListener('click', () => chrome.runtime.openOptionsPage());
+    banner.classList.remove('hidden');
   } else if (r?.level === 'not_controllable') {
     banner.textContent = 'Your proxy settings are managed by your administrator; Tervyn cannot change them.';
     banner.classList.remove('hidden');
