@@ -14,13 +14,11 @@ jobs:
           node-version: 22
       - name: Unit tests (shared logic, Chromium PAC and Firefox proxy.onRequest paths)
         run: npm test
-      - name: extensions/ folders match the sources
-        run: node scripts/build.mjs --check
       - name: Lint the Firefox build with Mozilla's add-on linter
-        run: npx --yes web-ext@8 lint --source-dir extensions/firefox
+        run: npx --yes web-ext@8 lint --source-dir extension
       - name: Install Playwright Chromium
         run: npm install --no-save playwright && npx playwright install --with-deps chromium
-      - name: End-to-end tests (Chromium build against mock proxies)
+      - name: End-to-end tests (extension in Chromium against mock proxies)
         run: npm run test:e2e
       - name: Package
         run: npm run build

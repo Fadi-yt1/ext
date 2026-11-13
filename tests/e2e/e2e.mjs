@@ -26,8 +26,8 @@ import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright');
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-// Test exactly what users install (run `npm run build` first).
-const EXT = path.join(ROOT, 'extensions', 'chromium');
+// The folder users load in developer mode.
+const EXT = path.join(ROOT, 'extension');
 const REAL_IP = '198.51.100.100';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

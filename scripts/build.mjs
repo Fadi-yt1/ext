@@ -1,12 +1,7 @@
 /**
- * Builds a ready-to-load extension folder and a store-ready zip for every browser family:
- *
- *   extensions/chromium/   Chrome, Edge, Brave, Opera, Vivaldi, Arc… (service worker, PAC routing)
- *   extensions/firefox/    Firefox desktop & Firefox for Android (event page, proxy.onRequest)
- *   dist/tervyn-vpn-<version>-<target>.zip
- *
- * Both are built from the same sources; only manifest.json differs. No dependencies (Node 22+).
- * Run with --check to verify the committed extensions/ folders are up to date (used by CI).
+ * Zips the universal extension/ folder into dist/tervyn-vpn-<version>.zip — the same file can be
+ * uploaded to the Chrome Web Store, Edge Add-ons, Opera Add-ons and addons.mozilla.org.
+ * No dependencies (Node 22+).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +9,7 @@ import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const INCLUDE = ['src', 'icons'];
+const EXT = path.join(ROOT, 'extension');
 
 function walk(base, rel = '') {
   const abs = path.join(base, rel);
@@ -80,71 +75,9 @@ function zip(base, files) {
   return Buffer.concat([...locals, ...centrals, end]);
 }
 
-const base = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
-
-function chromiumManifest() {
-  return { ...base };
-}
-
-function firefoxManifest() {
-  const m = { ...base };
-  delete m.minimum_chrome_version;
-  // Firefox runs MV3 backgrounds as event pages, and needs webRequestBlocking for proxy logins.
-  m.background = { scripts: [base.background.service_worker], type: 'module' };
-  m.permissions = base.permissions.filter((p) => p !== 'webRequestAuthProvider').concat('webRequestBlocking');
-  m.browser_specific_settings = {
-    gecko: {
-      id: 'tervyn-vpn@tervyn.app',
-      strict_min_version: '128.0',
-      data_collection_permissions: { required: ['none'] },
-    },
-    gecko_android: { strict_min_version: '128.0' },
-  };
-  return m;
-}
-
-const TARGETS = { chromium: chromiumManifest, firefox: firefoxManifest };
-const check = process.argv.includes('--check');
-let stale = false;
-
-for (const [target, makeManifest] of Object.entries(TARGETS)) {
-  const outDir = path.join(ROOT, 'extensions', target);
-  const files = new Map();
-  for (const top of INCLUDE) for (const f of walk(ROOT, top)) files.set(f, fs.readFileSync(path.join(ROOT, f)));
-  files.set('manifest.json', Buffer.from(JSON.stringify(makeManifest(), null, 2) + '\n'));
-
-  if (check) {
-    const existing = new Set(walk(outDir));
-    for (const [f, data] of files) {
-      if (!existing.has(f) || !fs.readFileSync(path.join(outDir, f)).equals(data)) {
-        console.error(`extensions/${target}/${f} is out of date`);
-        stale = true;
-      }
-      existing.delete(f);
-    }
-    existing.forEach((f) => {
-      console.error(`extensions/${target}/${f} should not exist`);
-      stale = true;
-    });
-    continue;
-  }
-
-  fs.rmSync(outDir, { recursive: true, force: true });
-  for (const [f, data] of files) {
-    fs.mkdirSync(path.dirname(path.join(outDir, f)), { recursive: true });
-    fs.writeFileSync(path.join(outDir, f), data);
-  }
-  fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
-  const out = path.join(ROOT, 'dist', `tervyn-vpn-${base.version}-${target}.zip`);
-  const list = walk(outDir);
-  fs.writeFileSync(out, zip(outDir, list));
-  console.log(`extensions/${target}/  ->  ${path.relative(ROOT, out)}  (${list.length} files, ${(fs.statSync(out).size / 1024).toFixed(0)} KB)`);
-}
-
-if (check) {
-  if (stale) {
-    console.error('Run `npm run build` and commit the result.');
-    process.exit(1);
-  }
-  console.log('extensions/ folders are up to date.');
-}
+const { version } = JSON.parse(fs.readFileSync(path.join(EXT, 'manifest.json'), 'utf8'));
+const files = walk(EXT);
+fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
+const out = path.join(ROOT, 'dist', `tervyn-vpn-${version}.zip`);
+fs.writeFileSync(out, zip(EXT, files));
+console.log(`${path.relative(ROOT, out)}  (${files.length} files, ${(fs.statSync(out).size / 1024).toFixed(0)} KB)`);

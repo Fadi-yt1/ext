@@ -1,13 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { parseList, parseLine, endpointKey, toUrl, browserUnsupportedReason } from '../../src/lib/proxyList.js';
-import { normalizeDomain, matchesDomain, cidrToNetMask, collectSiteRules } from '../../src/lib/domains.js';
-import { buildPac, directive } from '../../src/lib/pac.js';
-import { rank, decide, isClearlyFaster, score } from '../../src/lib/ranking.js';
-import { parseTrace, traceCountry } from '../../src/lib/trace.js';
-import { parseProxio } from '../../src/lib/proxio.js';
-import { flag, duration } from '../../src/lib/format.js';
+import { parseList, parseLine, endpointKey, toUrl, browserUnsupportedReason } from '../../extension/src/lib/proxyList.js';
+import { normalizeDomain, matchesDomain, cidrToNetMask, collectSiteRules } from '../../extension/src/lib/domains.js';
+import { buildPac, directive } from '../../extension/src/lib/pac.js';
+import { rank, decide, isClearlyFaster, score } from '../../extension/src/lib/ranking.js';
+import { parseTrace, traceCountry } from '../../extension/src/lib/trace.js';
+import { parseProxio } from '../../extension/src/lib/proxio.js';
+import { flag, duration } from '../../extension/src/lib/format.js';
 
 test('parses every supported proxy line format', () => {
   assert.deepEqual(parseLine('1.2.3.4:8080'), { protocol: 'http', host: '1.2.3.4', port: 8080 });

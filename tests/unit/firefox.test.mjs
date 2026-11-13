@@ -6,8 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { buildPac, route, compileRouting, toFirefoxProxyInfo } from '../../src/lib/pac.js';
-import { browserUnsupportedReason } from '../../src/lib/proxyList.js';
+import { buildPac, route, compileRouting, toFirefoxProxyInfo } from '../../extension/src/lib/pac.js';
+import { browserUnsupportedReason } from '../../extension/src/lib/proxyList.js';
 
 const HOSTS = [
   'example.com', 'www.youtube.com', 'youtube.com', 'notyoutube.com', 't.me', '149.154.167.50', '149.155.0.1',
@@ -82,8 +82,8 @@ function fakeFirefox() {
 test('Firefox controller routes requests via proxy.onRequest and logs in to proxies', async () => {
   const ff = fakeFirefox();
   globalThis.chrome = ff.chrome;
-  const ctl = await import(`../../src/bg/controller.js?firefox=${Date.now()}`);
-  const { IS_FIREFOX } = await import(`../../src/lib/platform.js?firefox=${Date.now()}`);
+  const ctl = await import(`../../extension/src/bg/controller.js?firefox=${Date.now()}`);
+  const { IS_FIREFOX } = await import(`../../extension/src/lib/platform.js?firefox=${Date.now()}`);
   assert.ok(IS_FIREFOX);
   ctl.registerProxyHandler();
   ctl.registerAuthHandler();
